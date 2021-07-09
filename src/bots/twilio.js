@@ -1,11 +1,14 @@
 const { ActivityTypes } = require('botbuilder');
 const { ActivityHandler } = require('botbuilder');
 
-const room = [];
+const { db } = require('./../firebase');
 
 class TwilioBot extends ActivityHandler {
     constructor() {
         super();
+
+        const usersDB = db.collection('users');
+
         this.onMembersAdded(async (context, next) => {
             const membersAdded = context.activity.membersAdded;
             for (let cnt = 0; cnt < membersAdded.length; ++cnt) {
@@ -22,16 +25,19 @@ class TwilioBot extends ActivityHandler {
             const name = context.activity.channelData.ProfileName;
             const any = context.activity.conversation.id;
 
-            let userCli = room.find(cliInRoom => cliInRoom.any === any);
+            let userCli;
+            const userDB = await usersDB.doc(any).get();
 
-            if (!userCli) {
+            if (userDB && userDB.exists) {
+                userCli = userDB.data();
+            } else {
                 userCli = {
                     name,
                     any,
+                    channel: 'whatsapp',
                     interactions: []
                 };
-
-                room.push(userCli);
+                await userDB.ref.set(userCli);
             }
 
             if (!userCli.interactions.length) {
@@ -102,6 +108,7 @@ class TwilioBot extends ActivityHandler {
                 }
             }
 
+            await userDB.ref.set(userCli, { merge: true });
             // By calling next() you ensure that the next BotHandler is run.
             await next();
         });
