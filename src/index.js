@@ -12,6 +12,7 @@ const restify = require('restify');
 // Import required bot services.
 // See https://aka.ms/bot-services to learn more about the different parts of a bot.
 const { BotFrameworkAdapter } = require('botbuilder');
+const { UserState, ConversationState, MemoryStorage } = require('botbuilder');
 const { TwilioWhatsAppAdapter } = require('@botbuildercommunity/adapter-twilio-whatsapp');
 
 // This bot's main dialog.
@@ -39,7 +40,7 @@ const whatsAppAdapter = new TwilioWhatsAppAdapter({
 });
 
 // Catch-all for errors.
-adapter.onTurnError = async (context, error) => {
+adapter.onTurnError = async(context, error) => {
     // This check writes out errors to console log .vs. app insights.
     // NOTE: In production environment, you should consider logging this to Azure
     //       application insights.
@@ -58,20 +59,30 @@ adapter.onTurnError = async (context, error) => {
     await context.sendActivity('To continue to run this bot, please fix the bot source code.');
 };
 
+
+
+// Define state store for your bot.
+// See https://aka.ms/about-bot-state to learn more about bot state.
+const memoryStorage = new MemoryStorage();
+
+// Create conversation and user state with in-memory storage provider.
+const conversationState = new ConversationState(memoryStorage);
+const userState = new UserState(memoryStorage);
+
 // Create the main dialog.
 const mainBot = new MainBot();
-const twilioBot = new TwilioBot();
+const twilioBot = new TwilioBot(conversationState, userState);
 
 // Listen for incoming requests.
-server.post('/api/messages', async (req, res) => {
-    await adapter.processActivity(req, res, async (context) => {
+server.post('/api/messages', async(req, res) => {
+    await adapter.processActivity(req, res, async(context) => {
         await mainBot.run(context);
     });
 });
 
 // WhatsApp endpoint for Twilio
-server.post('/api/whatsapp/messages', async (req, res) => {
-    await whatsAppAdapter.processActivity(req, res, async (context) => {
+server.post('/api/whatsapp/messages', async(req, res) => {
+    await whatsAppAdapter.processActivity(req, res, async(context) => {
         await twilioBot.run(context);
     });
 });
