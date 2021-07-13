@@ -1,15 +1,15 @@
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
-
 const functions = require("firebase-functions");
+
+// // Create and Deploy Your First Cloud Functions
+// // https://firebase.google.com/docs/functions/write-firebase-functions
+//
+
 
 const path = require('path');
 const env = require('dotenv');
 
 const ENV_FILE = path.join(__dirname, '..', '.env');
 env.config({ path: ENV_FILE });
-
-const restify = require('restify');
 
 // Import required bot services.
 // See https://aka.ms/bot-services to learn more about the different parts of a bot.
@@ -21,11 +21,16 @@ const { TwilioWhatsAppAdapter } = require('@botbuildercommunity/adapter-twilio-w
 const { MainBot } = require('./bots/main');
 const { TwilioBot } = require('./bots/twilio');
 
-// Create HTTP server
-const server = restify.createServer();
-server.listen(process.env.port || process.env.PORT || 3978, () => {
-    console.log(`\n${ server.name } listening to ${ server.url }`);
-});
+const express = require('express');
+const cors = require('cors');
+console.log(`\n ########################$$$$$$$$$$$$$$$$$$$$$$$$`);
+const app = express();
+
+// Automatically allow cross-origin requests
+app.use(cors({ origin: true }));
+
+// Add middleware to authenticate requests
+//app.use(myMiddleware);
 
 // Create adapter.
 // See https://aka.ms/about-bot-adapter to learn more about .bot file its use and bot configuration.
@@ -61,6 +66,9 @@ adapter.onTurnError = async(context, error) => {
     await context.sendActivity('To continue to run this bot, please fix the bot source code.');
 };
 
+console.log(`\n ########################$$$$$$$$$$$$$$$$$$$$$$$$`);
+console.log('index >>>>>> 2');
+console.log(`\n ########################$$$$$$$$$$$$$$$$$$$$$$$$`);
 
 
 // Define state store for your bot.
@@ -72,28 +80,16 @@ const conversationState = new ConversationState(memoryStorage);
 const userState = new UserState(memoryStorage);
 
 // Create the main dialog.
-const mainBot = new MainBot();
+//const mainBot = new MainBot();
 const twilioBot = new TwilioBot(conversationState, userState);
 
-// Listen for incoming requests.
-server.post('/api/messages', async(req, res) => {
-    await adapter.processActivity(req, res, async(context) => {
-        await mainBot.run(context);
-    });
-});
+// build multiple CRUD interfaces:
+app.post('/api/whatsapp/messages', async(req, res) => {
 
-// WhatsApp endpoint for Twilio
-server.post('/api/whatsapp/messages', async(req, res) => {
     await whatsAppAdapter.processActivity(req, res, async(context) => {
         await twilioBot.run(context);
     });
 });
 
-
-// // Create and Deploy Your First Cloud Functions
-// // https://firebase.google.com/docs/functions/write-firebase-functions
-//
-exports.helloWorld = functions.https.onRequest((request, response) => {
-    functions.logger.info("Hello logs!", { structuredData: true });
-    response.send("Hello from Firebase!");
-});
+// Expose Express API as a single Cloud Function:
+exports.iabella = functions.https.onRequest(app);
